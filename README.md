@@ -34,8 +34,6 @@ A beautifully designed Flutter app to help you manage your daily routine and to-
 > <img width="380" height="539" alt="image" src="https://github.com/user-attachments/assets/7877c4ce-b3de-4e01-8527-150188f8a6bc" />
 > <img width="380" height="539" alt="image" src="https://github.com/user-attachments/assets/0160adff-1e7b-45d2-9c55-b511e3d092a6" />
 
-
-
 ---
 
 ## 🚀 Getting Started
