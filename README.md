@@ -1,6 +1,6 @@
-# 📅 Routine — Daily Planner & Task Manager
+# 📅 Routine - Daily Planner & Task Manager
 
-A beautifully designed Flutter app to help you manage your daily routine and to-do tasks — all in one place.
+A beautifully designed Flutter app to help you manage your daily routine and to-do tasks - all in one place.
 
 ---
 
