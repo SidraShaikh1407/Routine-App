@@ -47,8 +47,7 @@ A beautifully designed Flutter app to help you manage your daily routine and to-
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/routine.git
-
+git clone https:https://github.com/SidraShaikh1407/Routine-App.git
 # Navigate into the project
 cd routine/flutter_application_1
 
