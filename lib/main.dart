@@ -1,4 +1,25 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// ─── ICON LOOKUP MAP (const-safe for release builds) ─────
+const Map<String, IconData> _iconMap = {
+  'wb_sunny_outlined':      Icons.wb_sunny_outlined,
+  'fitness_center':         Icons.fitness_center,
+  'free_breakfast_outlined':Icons.free_breakfast_outlined,
+  'menu_book_outlined':     Icons.menu_book_outlined,
+  'self_improvement':       Icons.self_improvement,
+  'lunch_dining_outlined':  Icons.lunch_dining_outlined,
+  'bedtime_outlined':       Icons.bedtime_outlined,
+  'directions_walk':        Icons.directions_walk,
+  'dinner_dining_outlined': Icons.dinner_dining_outlined,
+  'tv_outlined':            Icons.tv_outlined,
+  'auto_stories_outlined':  Icons.auto_stories_outlined,
+  'nightlight_round':       Icons.nightlight_round,
+  'schedule':               Icons.schedule,
+};
+
+IconData _iconFromName(String name) => _iconMap[name] ?? Icons.schedule;
 
 void main() => runApp(TodoApp());
 
@@ -27,119 +48,127 @@ class MainNavScreen extends StatefulWidget {
 
 class _MainNavScreenState extends State<MainNavScreen> {
   int _currentIndex = 0;
+  bool _loaded = false;
 
-  final List<Task> tasks = [
-    Task(title: 'Buy groceries', category: 'Personal'),
-    Task(title: 'Complete Flutter project', category: 'Work'),
-    Task(title: 'Read for 20 minutes', category: 'Personal'),
+  List<Task> tasks = [];
+
+  // Default routines (used only on first-ever launch)
+  final List<RoutineItem> _defaultRoutines = [
+    RoutineItem(title: 'Wake up & freshen up', hour: 5, minute: 30, colorHex: 0xFF4FC3F7, iconName: 'wb_sunny_outlined'),
+    RoutineItem(title: 'Morning exercise',      hour: 6, minute: 0,  colorHex: 0xFF81C784, iconName: 'fitness_center'),
+    RoutineItem(title: 'Breakfast',             hour: 7, minute: 0,  colorHex: 0xFFFFB74D, iconName: 'free_breakfast_outlined'),
+    RoutineItem(title: 'Study / Work session 1',hour: 8, minute: 0,  colorHex: 0xFF7986CB, iconName: 'menu_book_outlined'),
+    RoutineItem(title: 'Short break',           hour: 10,minute: 30, colorHex: 0xFFA5D6A7, iconName: 'self_improvement'),
+    RoutineItem(title: 'Study / Work session 2',hour: 11,minute: 0,  colorHex: 0xFF7986CB, iconName: 'menu_book_outlined'),
+    RoutineItem(title: 'Lunch',                 hour: 13,minute: 0,  colorHex: 0xFFFFB74D, iconName: 'lunch_dining_outlined'),
+    RoutineItem(title: 'Rest / Nap',            hour: 14,minute: 0,  colorHex: 0xFF80DEEA, iconName: 'bedtime_outlined'),
+    RoutineItem(title: 'Study / Work session 3',hour: 15,minute: 0,  colorHex: 0xFF7986CB, iconName: 'menu_book_outlined'),
+    RoutineItem(title: 'Evening walk',          hour: 17,minute: 30, colorHex: 0xFF81C784, iconName: 'directions_walk'),
+    RoutineItem(title: 'Dinner',                hour: 19,minute: 0,  colorHex: 0xFFFFB74D, iconName: 'dinner_dining_outlined'),
+    RoutineItem(title: 'Leisure / Screen time', hour: 20,minute: 0,  colorHex: 0xFFCE93D8, iconName: 'tv_outlined'),
+    RoutineItem(title: 'Read / Wind down',      hour: 21,minute: 30, colorHex: 0xFFEF9A9A, iconName: 'auto_stories_outlined'),
+    RoutineItem(title: 'Sleep',                 hour: 22,minute: 30, colorHex: 0xFF90CAF9, iconName: 'nightlight_round'),
   ];
 
-  final List<RoutineItem> routines = [
-    RoutineItem(
-      title: 'Wake up & freshen up',
-      hour: 5,
-      minute: 30,
-      colorHex: 0xFF4FC3F7,
-      icon: Icons.wb_sunny_outlined,
-    ),
-    RoutineItem(
-      title: 'Morning exercise',
-      hour: 6,
-      minute: 0,
-      colorHex: 0xFF81C784,
-      icon: Icons.fitness_center,
-    ),
-    RoutineItem(
-      title: 'Breakfast',
-      hour: 7,
-      minute: 0,
-      colorHex: 0xFFFFB74D,
-      icon: Icons.free_breakfast_outlined,
-    ),
-    RoutineItem(
-      title: 'Study / Work session 1',
-      hour: 8,
-      minute: 0,
-      colorHex: 0xFF7986CB,
-      icon: Icons.menu_book_outlined,
-    ),
-    RoutineItem(
-      title: 'Short break',
-      hour: 10,
-      minute: 30,
-      colorHex: 0xFFA5D6A7,
-      icon: Icons.self_improvement,
-    ),
-    RoutineItem(
-      title: 'Study / Work session 2',
-      hour: 11,
-      minute: 0,
-      colorHex: 0xFF7986CB,
-      icon: Icons.menu_book_outlined,
-    ),
-    RoutineItem(
-      title: 'Lunch',
-      hour: 13,
-      minute: 0,
-      colorHex: 0xFFFFB74D,
-      icon: Icons.lunch_dining_outlined,
-    ),
-    RoutineItem(
-      title: 'Rest / Nap',
-      hour: 14,
-      minute: 0,
-      colorHex: 0xFF80DEEA,
-      icon: Icons.bedtime_outlined,
-    ),
-    RoutineItem(
-      title: 'Study / Work session 3',
-      hour: 15,
-      minute: 0,
-      colorHex: 0xFF7986CB,
-      icon: Icons.menu_book_outlined,
-    ),
-    RoutineItem(
-      title: 'Evening walk',
-      hour: 17,
-      minute: 30,
-      colorHex: 0xFF81C784,
-      icon: Icons.directions_walk,
-    ),
-    RoutineItem(
-      title: 'Dinner',
-      hour: 19,
-      minute: 0,
-      colorHex: 0xFFFFB74D,
-      icon: Icons.dinner_dining_outlined,
-    ),
-    RoutineItem(
-      title: 'Leisure / Screen time',
-      hour: 20,
-      minute: 0,
-      colorHex: 0xFFCE93D8,
-      icon: Icons.tv_outlined,
-    ),
-    RoutineItem(
-      title: 'Read / Wind down',
-      hour: 21,
-      minute: 30,
-      colorHex: 0xFFEF9A9A,
-      icon: Icons.auto_stories_outlined,
-    ),
-    RoutineItem(
-      title: 'Sleep',
-      hour: 22,
-      minute: 30,
-      colorHex: 0xFF90CAF9,
-      icon: Icons.nightlight_round,
-    ),
-  ];
+  List<RoutineItem> routines = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  // ── LOAD from SharedPreferences ──
+  Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // --- Tasks ---
+    final tasksJson = prefs.getStringList('tasks') ?? [];
+    final loadedTasks = tasksJson.map((s) {
+      final m = jsonDecode(s) as Map<String, dynamic>;
+      return Task(
+        title: m['title'] as String,
+        category: m['category'] as String? ?? 'General',
+        isDone: m['isDone'] as bool? ?? false,
+      );
+    }).toList();
+
+    // --- Routines ---
+    final routinesJson = prefs.getStringList('routines');
+    List<RoutineItem> loadedRoutines;
+
+    if (routinesJson == null || routinesJson.isEmpty) {
+      // First launch — use defaults
+      loadedRoutines = List.from(_defaultRoutines);
+    } else {
+      loadedRoutines = routinesJson.map((s) {
+        final m = jsonDecode(s) as Map<String, dynamic>;
+        return RoutineItem(
+          title:    m['title']    as String,
+          hour:     m['hour']     as int,
+          minute:   m['minute']   as int,
+          colorHex: m['colorHex'] as int,
+          isDone:   m['isDone']   as bool? ?? false,
+          iconName: m['iconName'] as String? ?? 'schedule',
+        );
+      }).toList();
+    }
+
+    setState(() {
+      tasks    = loadedTasks;
+      routines = loadedRoutines;
+      _loaded  = true;
+    });
+  }
+
+  // ── SAVE Tasks ──
+  Future<void> _saveTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = tasks.map((t) => jsonEncode({
+      'title':    t.title,
+      'category': t.category,
+      'isDone':   t.isDone,
+    })).toList();
+    await prefs.setStringList('tasks', list);
+  }
+
+  // ── SAVE Routines ──
+  Future<void> _saveRoutines() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = routines.map((r) => jsonEncode({
+      'title':    r.title,
+      'hour':     r.hour,
+      'minute':   r.minute,
+      'colorHex': r.colorHex,
+      'isDone':   r.isDone,
+      'iconName': r.iconName,
+    })).toList();
+    await prefs.setStringList('routines', list);
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (!_loaded) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final screens = [
-      HomeScreen(tasks: tasks),
-      RoutineScreen(routines: routines),
+      HomeScreen(
+        tasks: tasks,
+        onTasksChanged: () {
+          setState(() {});
+          _saveTasks();
+        },
+      ),
+      RoutineScreen(
+        routines: routines,
+        onRoutinesChanged: () {
+          setState(() {});
+          _saveRoutines();
+        },
+      ),
       StatsScreen(tasks: tasks),
     ];
 
@@ -151,18 +180,9 @@ class _MainNavScreenState extends State<MainNavScreen> {
         backgroundColor: Colors.white,
         indicatorColor: Colors.indigo[50],
         destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.checklist_rounded),
-            label: 'Tasks',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.schedule_rounded),
-            label: 'Routine',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_rounded),
-            label: 'Stats',
-          ),
+          NavigationDestination(icon: Icon(Icons.checklist_rounded),  label: 'Tasks'),
+          NavigationDestination(icon: Icon(Icons.schedule_rounded),   label: 'Routine'),
+          NavigationDestination(icon: Icon(Icons.bar_chart_rounded),  label: 'Stats'),
         ],
       ),
     );
@@ -183,7 +203,7 @@ class RoutineItem {
   int hour;
   int minute;
   int colorHex;
-  IconData icon;
+  String iconName;
   bool isDone;
 
   RoutineItem({
@@ -191,9 +211,11 @@ class RoutineItem {
     required this.hour,
     required this.minute,
     required this.colorHex,
-    required this.icon,
+    required this.iconName,
     this.isDone = false,
   });
+
+  IconData get icon => _iconFromName(iconName);
 
   String get timeLabel {
     final h = hour % 12 == 0 ? 12 : hour % 12;
@@ -208,7 +230,8 @@ class RoutineItem {
 // ─── HOME SCREEN ─────────────────────────────────────────
 class HomeScreen extends StatefulWidget {
   final List<Task> tasks;
-  const HomeScreen({required this.tasks});
+  final VoidCallback onTasksChanged;
+  const HomeScreen({required this.tasks, required this.onTasksChanged});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -218,20 +241,29 @@ class _HomeScreenState extends State<HomeScreen> {
   String filter = 'All';
 
   List<Task> get tasks => widget.tasks;
-  int get doneCount => tasks.where((t) => t.isDone).length;
+  int get doneCount    => tasks.where((t) => t.isDone).length;
   int get pendingCount => tasks.where((t) => !t.isDone).length;
 
   List<Task> get filteredTasks {
     if (filter == 'Pending') return tasks.where((t) => !t.isDone).toList();
-    if (filter == 'Done') return tasks.where((t) => t.isDone).toList();
+    if (filter == 'Done')    return tasks.where((t) => t.isDone).toList();
     return tasks;
   }
 
-  void addTask(String title, String category) =>
-      setState(() => tasks.add(Task(title: title, category: category)));
+  void addTask(String title, String category) {
+    tasks.add(Task(title: title, category: category));
+    widget.onTasksChanged();
+  }
 
-  void toggleTask(Task task) => setState(() => task.isDone = !task.isDone);
-  void deleteTask(Task task) => setState(() => tasks.remove(task));
+  void toggleTask(Task task) {
+    task.isDone = !task.isDone;
+    widget.onTasksChanged();
+  }
+
+  void deleteTask(Task task) {
+    tasks.remove(task);
+    widget.onTasksChanged();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -251,21 +283,9 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _SummaryChip(
-                  label: 'Total',
-                  count: tasks.length,
-                  color: Colors.white,
-                ),
-                _SummaryChip(
-                  label: 'Pending',
-                  count: pendingCount,
-                  color: Colors.amber[200]!,
-                ),
-                _SummaryChip(
-                  label: 'Done',
-                  count: doneCount,
-                  color: Colors.greenAccent[200]!,
-                ),
+                _SummaryChip(label: 'Total',   count: tasks.length, color: Colors.white),
+                _SummaryChip(label: 'Pending', count: pendingCount, color: Colors.amber[200]!),
+                _SummaryChip(label: 'Done',    count: doneCount,    color: Colors.greenAccent[200]!),
               ],
             ),
           ),
@@ -282,9 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     selected: selected,
                     onSelected: (_) => setState(() => filter = f),
                     selectedColor: Colors.indigo,
-                    labelStyle: TextStyle(
-                      color: selected ? Colors.white : Colors.black87,
-                    ),
+                    labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87),
                   ),
                 );
               }).toList(),
@@ -297,19 +315,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.check_circle_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
+                        Icon(Icons.check_circle_outline, size: 64, color: Colors.grey[400]),
                         SizedBox(height: 12),
-                        Text(
-                          'No tasks here!',
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 16,
-                          ),
-                        ),
+                        Text('No tasks here!', style: TextStyle(color: Colors.grey[500], fontSize: 16)),
                       ],
                     ),
                   )
@@ -364,9 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 autofocus: true,
                 decoration: InputDecoration(
                   hintText: 'Enter task title...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
               SizedBox(height: 16),
@@ -374,23 +380,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 value: selectedCategory,
                 decoration: InputDecoration(
                   labelText: 'Category',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 items: ['General', 'Work', 'Personal', 'Shopping', 'Health']
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
-                onChanged: (val) =>
-                    setDialogState(() => selectedCategory = val!),
+                onChanged: (val) => setDialogState(() => selectedCategory = val!),
               ),
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.indigo,
@@ -414,7 +414,8 @@ class _HomeScreenState extends State<HomeScreen> {
 // ─── ROUTINE SCREEN (24-HR SCHEDULE) ─────────────────────
 class RoutineScreen extends StatefulWidget {
   final List<RoutineItem> routines;
-  const RoutineScreen({required this.routines});
+  final VoidCallback onRoutinesChanged;
+  const RoutineScreen({required this.routines, required this.onRoutinesChanged});
 
   @override
   State<RoutineScreen> createState() => _RoutineScreenState();
@@ -425,7 +426,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
   int get doneCount => routines.where((r) => r.isDone).length;
 
   String get currentSlot {
-    final now = TimeOfDay.now();
+    final now     = TimeOfDay.now();
     final nowMins = now.hour * 60 + now.minute;
     RoutineItem? current;
     for (var r in routines) {
@@ -437,16 +438,17 @@ class _RoutineScreenState extends State<RoutineScreen> {
   void _showAddRoutineDialog(BuildContext context) {
     final titleController = TextEditingController();
     TimeOfDay selectedTime = TimeOfDay.now();
-    IconData selectedIcon = Icons.schedule;
 
     final iconOptions = {
-      'Study': Icons.menu_book_outlined,
-      'Exercise': Icons.fitness_center,
-      'Meal': Icons.lunch_dining_outlined,
-      'Sleep': Icons.bedtime_outlined,
-      'Break': Icons.self_improvement,
-      'Other': Icons.schedule,
+      'Study':    'menu_book_outlined',
+      'Exercise': 'fitness_center',
+      'Meal':     'lunch_dining_outlined',
+      'Sleep':    'bedtime_outlined',
+      'Break':    'self_improvement',
+      'Other':    'schedule',
     };
+
+    String selectedIconName = 'schedule';
 
     showDialog(
       context: context,
@@ -462,9 +464,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                   autofocus: true,
                   decoration: InputDecoration(
                     hintText: 'Activity name...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
                 SizedBox(height: 14),
@@ -474,10 +474,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                   title: Text(selectedTime.format(ctx)),
                   trailing: TextButton(
                     onPressed: () async {
-                      final picked = await showTimePicker(
-                        context: ctx,
-                        initialTime: selectedTime,
-                      );
+                      final picked = await showTimePicker(context: ctx, initialTime: selectedTime);
                       if (picked != null) setD(() => selectedTime = picked);
                     },
                     child: Text('Change'),
@@ -488,22 +485,20 @@ class _RoutineScreenState extends State<RoutineScreen> {
                   spacing: 8,
                   runSpacing: 4,
                   children: iconOptions.entries.map((e) {
-                    final active = selectedIcon == e.value;
+                    final active = selectedIconName == e.value;
                     return ChoiceChip(
                       label: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(e.value, size: 14),
+                          Icon(_iconFromName(e.value), size: 14),
                           SizedBox(width: 4),
                           Text(e.key, style: TextStyle(fontSize: 12)),
                         ],
                       ),
                       selected: active,
-                      onSelected: (_) => setD(() => selectedIcon = e.value),
+                      onSelected: (_) => setD(() => selectedIconName = e.value),
                       selectedColor: Colors.indigo,
-                      labelStyle: TextStyle(
-                        color: active ? Colors.white : Colors.black87,
-                      ),
+                      labelStyle: TextStyle(color: active ? Colors.white : Colors.black87),
                     );
                   }).toList(),
                 ),
@@ -511,10 +506,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.indigo,
@@ -522,22 +514,16 @@ class _RoutineScreenState extends State<RoutineScreen> {
               ),
               onPressed: () {
                 if (titleController.text.trim().isNotEmpty) {
-                  setState(() {
-                    routines.add(
-                      RoutineItem(
-                        title: titleController.text.trim(),
-                        hour: selectedTime.hour,
-                        minute: selectedTime.minute,
-                        colorHex: 0xFF7986CB,
-                        icon: selectedIcon,
-                      ),
-                    );
-                    routines.sort(
-                      (a, b) => (a.hour * 60 + a.minute).compareTo(
-                        b.hour * 60 + b.minute,
-                      ),
-                    );
-                  });
+                  routines.add(RoutineItem(
+                    title:    titleController.text.trim(),
+                    hour:     selectedTime.hour,
+                    minute:   selectedTime.minute,
+                    colorHex: 0xFF7986CB,
+                    iconName: selectedIconName,
+                  ));
+                  routines.sort((a, b) =>
+                      (a.hour * 60 + a.minute).compareTo(b.hour * 60 + b.minute));
+                  widget.onRoutinesChanged();
                   Navigator.pop(ctx);
                 }
               },
@@ -551,7 +537,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final now = TimeOfDay.now();
+    final now     = TimeOfDay.now();
     final nowMins = now.hour * 60 + now.minute;
 
     return Scaffold(
@@ -559,10 +545,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
       appBar: AppBar(
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        title: Text(
-          'Daily Routine',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: Text('Daily Routine', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: Column(
         children: [
@@ -575,11 +558,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.play_circle_outline,
-                      color: Colors.white70,
-                      size: 16,
-                    ),
+                    Icon(Icons.play_circle_outline, color: Colors.white70, size: 16),
                     SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -597,9 +576,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                     value: routines.isEmpty ? 0 : doneCount / routines.length,
                     minHeight: 8,
                     backgroundColor: Colors.white24,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.greenAccent[200]!,
-                    ),
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.greenAccent[200]!),
                   ),
                 ),
                 SizedBox(height: 6),
@@ -617,23 +594,27 @@ class _RoutineScreenState extends State<RoutineScreen> {
               padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               itemCount: routines.length,
               itemBuilder: (context, index) {
-                final item = routines[index];
+                final item     = routines[index];
                 final itemMins = item.hour * 60 + item.minute;
-                final isPast = itemMins < nowMins;
+                final isPast   = itemMins < nowMins;
                 final isCurrent = index < routines.length - 1
                     ? itemMins <= nowMins &&
-                          (routines[index + 1].hour * 60 +
-                                  routines[index + 1].minute) >
-                              nowMins
+                          (routines[index + 1].hour * 60 + routines[index + 1].minute) > nowMins
                     : itemMins <= nowMins;
 
                 return _RoutineCard(
-                  item: item,
-                  isPast: isPast,
+                  item:      item,
+                  isPast:    isPast,
                   isCurrent: isCurrent,
-                  isLast: index == routines.length - 1,
-                  onToggle: () => setState(() => item.isDone = !item.isDone),
-                  onDelete: () => setState(() => routines.removeAt(index)),
+                  isLast:    index == routines.length - 1,
+                  onToggle: () {
+                    item.isDone = !item.isDone;
+                    widget.onRoutinesChanged();
+                  },
+                  onDelete: () {
+                    routines.removeAt(index);
+                    widget.onRoutinesChanged();
+                  },
                 );
               },
             ),
@@ -711,20 +692,14 @@ class _RoutineCard extends StatelessWidget {
                         child: Container(
                           width: 6,
                           height: 6,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                          ),
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white),
                         ),
                       )
                     : null,
               ),
               if (!isLast)
                 Expanded(
-                  child: Container(
-                    width: 2,
-                    color: isPast ? Colors.indigo[100] : Colors.grey[200],
-                  ),
+                  child: Container(width: 2, color: isPast ? Colors.indigo[100] : Colors.grey[200]),
                 ),
             ],
           ),
@@ -743,10 +718,7 @@ class _RoutineCard extends StatelessWidget {
                   ),
                 ),
                 child: ListTile(
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   leading: Container(
                     width: 36,
                     height: 36,
@@ -760,20 +732,13 @@ class _RoutineCard extends StatelessWidget {
                     item.title,
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: isCurrent
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      decoration: item.isDone
-                          ? TextDecoration.lineThrough
-                          : null,
+                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                      decoration: item.isDone ? TextDecoration.lineThrough : null,
                       color: item.isDone ? Colors.grey[400] : Colors.black87,
                     ),
                   ),
                   subtitle: isCurrent
-                      ? Text(
-                          'In progress',
-                          style: TextStyle(fontSize: 11, color: Colors.indigo),
-                        )
+                      ? Text('In progress', style: TextStyle(fontSize: 11, color: Colors.indigo))
                       : null,
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -786,13 +751,9 @@ class _RoutineCard extends StatelessWidget {
                           height: 24,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: item.isDone
-                                ? Colors.indigo
-                                : Colors.transparent,
+                            color: item.isDone ? Colors.indigo : Colors.transparent,
                             border: Border.all(
-                              color: item.isDone
-                                  ? Colors.indigo
-                                  : Colors.grey[400]!,
+                              color: item.isDone ? Colors.indigo : Colors.grey[400]!,
                               width: 1.5,
                             ),
                           ),
@@ -804,11 +765,7 @@ class _RoutineCard extends StatelessWidget {
                       SizedBox(width: 6),
                       GestureDetector(
                         onTap: onDelete,
-                        child: Icon(
-                          Icons.close,
-                          size: 18,
-                          color: Colors.grey[400],
-                        ),
+                        child: Icon(Icons.close, size: 18, color: Colors.grey[400]),
                       ),
                     ],
                   ),
@@ -836,16 +793,11 @@ class _TaskCard extends StatelessWidget {
 
   Color get categoryColor {
     switch (task.category) {
-      case 'Work':
-        return Colors.blue[100]!;
-      case 'Personal':
-        return Colors.purple[100]!;
-      case 'Shopping':
-        return Colors.orange[100]!;
-      case 'Health':
-        return Colors.green[100]!;
-      default:
-        return Colors.grey[200]!;
+      case 'Work':     return Colors.blue[100]!;
+      case 'Personal': return Colors.purple[100]!;
+      case 'Shopping': return Colors.orange[100]!;
+      case 'Health':   return Colors.green[100]!;
+      default:         return Colors.grey[200]!;
     }
   }
 
@@ -875,9 +827,7 @@ class _TaskCard extends StatelessWidget {
                 width: 2,
               ),
             ),
-            child: task.isDone
-                ? Icon(Icons.check, size: 16, color: Colors.white)
-                : null,
+            child: task.isDone ? Icon(Icons.check, size: 16, color: Colors.white) : null,
           ),
         ),
         title: Text(
@@ -896,10 +846,7 @@ class _TaskCard extends StatelessWidget {
               color: categoryColor,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(
-              task.category,
-              style: TextStyle(fontSize: 11, color: Colors.black54),
-            ),
+            child: Text(task.category, style: TextStyle(fontSize: 11, color: Colors.black54)),
           ),
         ),
         isThreeLine: true,
@@ -917,24 +864,13 @@ class _SummaryChip extends StatelessWidget {
   final String label;
   final int count;
   final Color color;
-  const _SummaryChip({
-    required this.label,
-    required this.count,
-    required this.color,
-  });
+  const _SummaryChip({required this.label, required this.count, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          '$count',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
+        Text('$count', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
         Text(label, style: TextStyle(fontSize: 12, color: Colors.white70)),
       ],
     );
@@ -962,28 +898,17 @@ class TaskDetailScreen extends StatelessWidget {
           children: [
             Text('Task', style: TextStyle(color: Colors.grey, fontSize: 13)),
             SizedBox(height: 4),
-            Text(
-              task.title,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
+            Text(task.title, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             SizedBox(height: 20),
-            Text(
-              'Category',
-              style: TextStyle(color: Colors.grey, fontSize: 13),
-            ),
+            Text('Category', style: TextStyle(color: Colors.grey, fontSize: 13)),
             SizedBox(height: 4),
-            Chip(
-              label: Text(task.category),
-              backgroundColor: Colors.indigo[50],
-            ),
+            Chip(label: Text(task.category), backgroundColor: Colors.indigo[50]),
             SizedBox(height: 20),
             Text('Status', style: TextStyle(color: Colors.grey, fontSize: 13)),
             SizedBox(height: 4),
             Chip(
               label: Text(task.isDone ? 'Completed' : 'Pending'),
-              backgroundColor: task.isDone
-                  ? Colors.green[50]
-                  : Colors.orange[50],
+              backgroundColor: task.isDone ? Colors.green[50] : Colors.orange[50],
               avatar: Icon(
                 task.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
                 size: 16,
@@ -998,9 +923,7 @@ class TaskDetailScreen extends StatelessWidget {
                   backgroundColor: task.isDone ? Colors.orange : Colors.indigo,
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: () {
                   onToggle();
@@ -1025,7 +948,7 @@ class StatsScreen extends StatelessWidget {
   final List<Task> tasks;
   const StatsScreen({required this.tasks});
 
-  int get done => tasks.where((t) => t.isDone).length;
+  int get done    => tasks.where((t) => t.isDone).length;
   int get pending => tasks.where((t) => !t.isDone).length;
 
   Map<String, int> get categoryBreakdown {
@@ -1039,7 +962,7 @@ class StatsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = tasks.length;
-    final pct = total == 0 ? 0.0 : done / total;
+    final pct   = total == 0 ? 0.0 : done / total;
 
     return Scaffold(
       appBar: AppBar(
@@ -1052,10 +975,7 @@ class StatsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Progress',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text('Progress', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             SizedBox(height: 16),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
@@ -1067,53 +987,26 @@ class StatsScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 8),
-            Text(
-              '${(pct * 100).toStringAsFixed(0)}% completed',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
+            Text('${(pct * 100).toStringAsFixed(0)}% completed', style: TextStyle(color: Colors.grey[600])),
             SizedBox(height: 28),
             Row(
               children: [
-                Expanded(
-                  child: _StatCard(
-                    label: 'Total',
-                    value: '$total',
-                    color: Colors.indigo[50]!,
-                  ),
-                ),
+                Expanded(child: _StatCard(label: 'Total',   value: '$total', color: Colors.indigo[50]!)),
                 SizedBox(width: 12),
-                Expanded(
-                  child: _StatCard(
-                    label: 'Done',
-                    value: '$done',
-                    color: Colors.green[50]!,
-                  ),
-                ),
+                Expanded(child: _StatCard(label: 'Done',    value: '$done',  color: Colors.green[50]!)),
                 SizedBox(width: 12),
-                Expanded(
-                  child: _StatCard(
-                    label: 'Pending',
-                    value: '$pending',
-                    color: Colors.orange[50]!,
-                  ),
-                ),
+                Expanded(child: _StatCard(label: 'Pending', value: '$pending', color: Colors.orange[50]!)),
               ],
             ),
             SizedBox(height: 28),
-            Text(
-              'By category',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text('By category', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             SizedBox(height: 12),
             ...categoryBreakdown.entries.map(
               (e) => Padding(
                 padding: EdgeInsets.only(bottom: 10),
                 child: Row(
                   children: [
-                    SizedBox(
-                      width: 80,
-                      child: Text(e.key, style: TextStyle(fontSize: 14)),
-                    ),
+                    SizedBox(width: 80, child: Text(e.key, style: TextStyle(fontSize: 14))),
                     SizedBox(width: 12),
                     Expanded(
                       child: ClipRRect(
@@ -1122,17 +1015,12 @@ class StatsScreen extends StatelessWidget {
                           value: total == 0 ? 0 : e.value / total,
                           minHeight: 10,
                           backgroundColor: Colors.grey[200],
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.indigo[300]!,
-                          ),
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.indigo[300]!),
                         ),
                       ),
                     ),
                     SizedBox(width: 8),
-                    Text(
-                      '${e.value}',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    ),
+                    Text('${e.value}', style: TextStyle(fontSize: 13, color: Colors.grey[600])),
                   ],
                 ),
               ),
@@ -1147,26 +1035,16 @@ class StatsScreen extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final String label, value;
   final Color color;
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _StatCard({required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          Text(
-            value,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
+          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           Text(label, style: TextStyle(fontSize: 12, color: Colors.black54)),
         ],
       ),
