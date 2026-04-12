@@ -265,6 +265,68 @@ class _HomeScreenState extends State<HomeScreen> {
     widget.onTasksChanged();
   }
 
+  void editTask(Task task, String newTitle, String newCategory) {
+    task.title    = newTitle;
+    task.category = newCategory;
+    widget.onTasksChanged();
+  }
+
+  void _showEditDialog(BuildContext context, Task task) {
+    final controller = TextEditingController(text: task.title);
+    String selectedCategory = task.category;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: Text('Edit Task'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Task title...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+              SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedCategory,
+                decoration: InputDecoration(
+                  labelText: 'Category',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                items: ['General', 'Work', 'Personal', 'Shopping', 'Health']
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (val) => setD(() => selectedCategory = val!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                if (controller.text.trim().isNotEmpty) {
+                  editTask(task, controller.text.trim(), selectedCategory);
+                  setState(() {});
+                  Navigator.pop(ctx);
+                }
+              },
+              child: Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -321,15 +383,64 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   )
+                : filter == 'All'
+                // ── Reorderable list (only in All view) ──
+                ? ReorderableListView.builder(
+                    buildDefaultDragHandles: false,
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    proxyDecorator: (child, index, animation) {
+                      return Material(
+                        elevation: 8,
+                        shadowColor: Colors.indigo.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                        child: child,
+                      );
+                    },
+                    itemCount: tasks.length,
+                    onReorder: (oldIndex, newIndex) {
+                      setState(() {
+                        if (newIndex > oldIndex) newIndex--;
+                        final task = tasks.removeAt(oldIndex);
+                        tasks.insert(newIndex, task);
+                      });
+                      widget.onTasksChanged();
+                    },
+                    itemBuilder: (context, index) {
+                      final task = tasks[index];
+                      return ReorderableDelayedDragStartListener(
+                        key: ValueKey(task),
+                        index: index,
+                        child: _TaskCard(
+                          task: task,
+                          onToggle: () => toggleTask(task),
+                          onDelete: () => deleteTask(task),
+                          onEdit:   () => _showEditDialog(context, task),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TaskDetailScreen(
+                                task: task,
+                                onToggle: () => toggleTask(task),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                // ── Normal list (filtered views) ──
                 : ListView.builder(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     itemCount: filteredTasks.length,
                     itemBuilder: (context, index) {
                       final task = filteredTasks[index];
                       return _TaskCard(
+                        key: ValueKey(task),
                         task: task,
                         onToggle: () => toggleTask(task),
                         onDelete: () => deleteTask(task),
+                        onEdit:   () => _showEditDialog(context, task),
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -782,13 +893,15 @@ class _RoutineCard extends StatelessWidget {
 // ─── TASK CARD WIDGET ─────────────────────────────────────
 class _TaskCard extends StatelessWidget {
   final Task task;
-  final VoidCallback onToggle, onDelete, onTap;
+  final VoidCallback onToggle, onDelete, onTap, onEdit;
 
   const _TaskCard({
+    super.key,
     required this.task,
     required this.onToggle,
     required this.onDelete,
     required this.onTap,
+    required this.onEdit,
   });
 
   Color get categoryColor {
@@ -812,7 +925,7 @@ class _TaskCard extends StatelessWidget {
       ),
       child: ListTile(
         onTap: onTap,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        contentPadding: EdgeInsets.only(left: 16, right: 4, top: 4, bottom: 4),
         leading: GestureDetector(
           onTap: onToggle,
           child: AnimatedContainer(
@@ -850,9 +963,21 @@ class _TaskCard extends StatelessWidget {
           ),
         ),
         isThreeLine: true,
-        trailing: IconButton(
-          icon: Icon(Icons.delete_outline, color: Colors.red[300]),
-          onPressed: onDelete,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Edit button
+            IconButton(
+              icon: Icon(Icons.edit_outlined, color: Colors.indigo[300], size: 20),
+              onPressed: onEdit,
+              tooltip: 'Edit',
+            ),
+            // Delete button
+            IconButton(
+              icon: Icon(Icons.delete_outline, color: Colors.red[300], size: 20),
+              onPressed: onDelete,
+            ),
+          ],
         ),
       ),
     );
